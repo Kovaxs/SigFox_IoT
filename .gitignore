@@ -1,0 +1,8 @@
+.vscode/
+
+*.zip
+*.c
+*.h
+*.cpp
+*.properties
+*.txt
