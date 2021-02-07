@@ -1,10 +1,8 @@
-#include <Ultrasonic.h>
-
-#include <RBD_LightSensor.h>
-
 #include <SigFox.h>
+#include <RBD_LightSensor.h>
 #include <ArduinoLowPower.h>
 #include <SimpleDHT.h>
+// #include <Ultrasonic.h>
 
 RBD::LightSensor light_sensor(A2);
 int pinDHT11 = A1;
@@ -13,7 +11,14 @@ SimpleDHT11 dht11(pinDHT11);
 // int echoPin = 2;
 // UltraSonicDistanceSensor distanceSensor(triggerPin, echoPin);
 // Ultrasonic ultrasonic(triggerPin, echoPin);
+typedef struct
+{
+  uint8_t temp;
+  uint8_t hum;
+  uint8_t phot;
+  uint8_t batt;
 
+} SigfoxMessage;
 
 void setup() {
   Serial.begin(9600);
@@ -26,11 +31,10 @@ void setup() {
 
   delay(100);
 
-  // enviar("123456789012");
-
 }
 
 void loop() {
+  SigfoxMessage msg;
   // start working...
   Serial.println("=================================");
   Serial.println("Sample DHT11...");
@@ -46,35 +50,39 @@ void loop() {
   }
   
   Serial.print("Sample OK: ");
-  Serial.print((int)temperature); Serial.print(" *C, "); 
-  Serial.print((int)humidity); Serial.println(" H");
+  msg.temp = (uint8_t)temperature;
+  Serial.print(msg.temp); Serial.print(" C, "); 
+  msg.hum = (uint8_t)humidity;
+  Serial.print(msg.hum); Serial.println(" H");
+ 
   Serial.println(" ");
-  Serial.println("=================================");
-  Serial.println("Sample SR04...");
-  Serial.println(light_sensor.getInversePercentValue ());
-  // double distance = distanceSensor.measureDistanceCm();
+  Serial.println("Sample Photo...");
+  msg.phot = (uint8_t)light_sensor.getInversePercentValue ();
+  Serial.println(msg.phot); Serial.println(" %");
   // Serial.print(ultrasonic.read(CM)); Serial.print(" cm");
   Serial.println(" ");
-  // delay(500);
-  // DHT11 sampling rate is 1HZ.
-  delay(1500);
+  msg.batt = (uint8_t)5;
+  Serial.println(" ");
+  Serial.println(msg.batt); Serial.println(" V");
+  // delay(1500);
+  enviar(msg);
+
+  delay(1000 * 10 * 60);
 }
-// void loop(){}
 
+void enviar(SigfoxMessage msg){
 
-
-
-void enviar(String msg){
-
+  SigFox.begin();
   SigFox.status();//Limpia las interrupciones pendientes
   delay(100);
   Serial.println("Enviando...");
 
   SigFox.beginPacket();
   Serial.println("Empezando paquete...");
-  SigFox.print(msg);
-  Serial.println("Enviando " + msg);
-  SigFox.endPacket();
+  SigFox.write((uint8_t*)&msg, sizeof(msg));
+  SigFox.debug();
+  Serial.println("Enviando... ");
+  SigFox.endPacket(false);
   Serial.print("Hecho!!");
 
   SigFox.end();
